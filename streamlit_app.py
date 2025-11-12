@@ -166,6 +166,7 @@ if uploaded:
             heatmap = (cam * 255).astype("uint8")
             heatmap = cv2.resize(heatmap, (img.size[0], img.size[1]))
             heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
 
             over = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
 

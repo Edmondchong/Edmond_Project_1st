@@ -80,6 +80,7 @@ def load_model(model_path, labels):
     ]
     return model, classes
 
+model, CLASSES = load_model(model_path, class_names)
 
 # -----------------------------
 # Preprocessing (match training)

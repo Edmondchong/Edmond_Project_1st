@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 from torchvision import transforms
 from huggingface_hub import hf_hub_download
-from pathlib import Path
 from PIL import Image
 import json, cv2, numpy as np
 
@@ -50,32 +49,20 @@ class WaferDefectNet(nn.Module):
         self.base_model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
         in_features = self.base_model.classifier[1].in_features
         self.base_model.classifier[1] = nn.Linear(in_features, num_classes)
-
     def forward(self, x):
         return self.base_model(x)
 
 @st.cache_resource
 def load_model(model_path, labels):
     state_dict = torch.load(model_path, map_location="cpu")
-    if "base_model.classifier.1.weight" in state_dict:
-        num_classes = state_dict["base_model.classifier.1.weight"].shape[0]
-    else:
-        key = [k for k in state_dict.keys() if k.endswith("classifier.1.weight")][0]
-        num_classes = state_dict[key].shape[0]
+    key = [k for k in state_dict.keys() if k.endswith("classifier.1.weight")][0]
+    num_classes = state_dict[key].shape[0]
 
-    model = WaferDefectNet(num_classes=num_classes)
+    model = WaferDefectNet(num_classes)
     model.load_state_dict(state_dict, strict=True)
     model.eval()
 
-    # Force correct wafer class order
-    classes = [
-        "Center",
-        "Edge-Loc",
-        "Edge-Ring",
-        "Loc",
-        "None",
-        "Scratch"
-    ]
+    classes = ["Center", "Edge-Loc", "Edge-Ring", "Loc", "None", "Scratch"]
     return model, classes
 
 model, CLASSES = load_model(model_path, class_names)
@@ -92,7 +79,7 @@ preprocess = transforms.Compose([
 ])
 
 # -----------------------------
-# Grad-CAM class
+# Grad-CAM
 # -----------------------------
 class GradCAM:
     def __init__(self, model, target_layer):
@@ -123,18 +110,16 @@ class GradCAM:
         weights = grads.mean(dim=(2, 3), keepdim=True)
         cam = (weights * acts).sum(dim=1)
         cam = torch.relu(cam)
-
-        cam = cam - cam.amin(dim=(1, 2), keepdim=True)
-        cam = cam / (cam.amax(dim=(1, 2), keepdim=True) + 1e-8)
+        cam = cam - cam.amin(dim=(1,2), keepdim=True)
+        cam = cam / (cam.amax(dim=(1,2), keepdim=True) + 1e-8)
         return cam.detach().cpu().numpy(), class_idx
 
-target_layer = model.base_model.features[-1]
-grad_cam = GradCAM(model, target_layer)
+grad_cam = GradCAM(model, model.base_model.features[-1])
 
 # -----------------------------
 # UI
 # -----------------------------
-uploaded = st.file_uploader("📤 Upload wafer map image (PNG/JPG)", type=["png", "jpg", "jpeg"])
+uploaded = st.file_uploader("📤 Upload wafer map image (PNG/JPG)", type=["png","jpg","jpeg"])
 if uploaded:
     img = Image.open(uploaded)
     st.image(img, caption="Uploaded Wafer Image", width=250)
@@ -154,31 +139,23 @@ if uploaded:
             st.write(f"**Confidence:** {conf:.2f}")
 
             # -----------------------------
-            # Grad-CAM visualization
+            # Grad-CAM Visualization
             # -----------------------------
             cam, _ = grad_cam(ipt, class_idx=pred_idx)
             cam = cam[0]
-
-            # Normalize and optionally invert
             cam = np.maximum(cam, 0)
             cam = cam / (cam.max() + 1e-8)
-            INVERT = True
-            if INVERT:
-                cam = 1 - cam
-
             heatmap = np.uint8(255 * cam)
             heatmap = cv2.resize(heatmap, (img.size[0], img.size[1]))
+
+            # Apply JET colormap and flip red/blue channels directly
             heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+            heatmap = heatmap[..., ::-1]  # 🔁 flip R↔B to correct the color direction
 
             overlay = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
 
             st.write("### Visualization")
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                st.image(img, caption="Original Wafer", width=300)
-            with col2:
-                st.image(overlay, caption="Grad-CAM Heatmap", width=300)
-
-            st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")
-
+            c1, c2 = st.columns(2)
+            c1.image(img, caption="Original Wafer", width=300)
+            c2.image(overlay, caption="Grad-CAM Heatmap", width=300)
+            st.caption("Red/Yellow = high attention, Blue = low attention.")

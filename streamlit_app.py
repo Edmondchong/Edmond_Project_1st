@@ -14,14 +14,14 @@ st.title("🧪 Wafer Defect Detection — Vision SMAI (Grad-CAM XAI)")
 st.caption("Upload a wafer map image to get class prediction and an explainability heatmap.")
 
 # -----------------------------
-# Config (edit these 2 values)
+# Config
 # -----------------------------
-HF_REPO = "EdmondChong/WaferDefectDetection"  
-MODEL_FILENAME = "wafer_efficientnet_b0_finetuned.pth"   
-LABELS_FILENAME = "labels.json"                          
+HF_REPO = "EdmondChong/WaferDefectDetection"
+MODEL_FILENAME = "wafer_efficientnet_b0_finetuned.pth"
+LABELS_FILENAME = "labels.json"
 
 # -----------------------------
-# Download artifacts (private)
+# Download artifacts
 # -----------------------------
 @st.cache_resource
 def fetch_artifacts():
@@ -56,12 +56,10 @@ class WaferDefectNet(nn.Module):
 
 @st.cache_resource
 def load_model(model_path, labels):
-    # Peek saved state dict to infer num_classes
     state_dict = torch.load(model_path, map_location="cpu")
     if "base_model.classifier.1.weight" in state_dict:
         num_classes = state_dict["base_model.classifier.1.weight"].shape[0]
     else:
-        # Fallback if key naming differs
         key = [k for k in state_dict.keys() if k.endswith("classifier.1.weight")][0]
         num_classes = state_dict[key].shape[0]
 
@@ -69,7 +67,7 @@ def load_model(model_path, labels):
     model.load_state_dict(state_dict, strict=True)
     model.eval()
 
-    # Finalize class names
+    # Force correct wafer class order
     classes = [
         "Center",
         "Edge-Loc",
@@ -83,13 +81,10 @@ def load_model(model_path, labels):
 model, CLASSES = load_model(model_path, class_names)
 
 # -----------------------------
-# Preprocessing (match training)
+# Preprocessing
 # -----------------------------
-# You resized to 128x128 + EfficientNet weights’ transforms during training;
-# For inference we can just use the official weights' transforms (they normalize correctly).
 weights = EfficientNet_B0_Weights.IMAGENET1K_V1
-base_tf = weights.transforms()  # includes Resize(224), ToTensor, Normalize
-# If you want to force 128x128 first: transforms.Resize((128,128)) then base_tf
+base_tf = weights.transforms()
 preprocess = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.Lambda(lambda img: img.convert("RGB")),
@@ -97,7 +92,7 @@ preprocess = transforms.Compose([
 ])
 
 # -----------------------------
-# Grad-CAM for EfficientNet-B0
+# Grad-CAM class
 # -----------------------------
 class GradCAM:
     def __init__(self, model, target_layer):
@@ -123,18 +118,16 @@ class GradCAM:
         self.model.zero_grad()
         score.backward(retain_graph=True)
 
-        # weights: global-average-pool the gradients across HxW
-        grads = self.gradients        # [N, C, H, W]
-        acts  = self.activations      # [N, C, H, W]
+        grads = self.gradients
+        acts = self.activations
         weights = grads.mean(dim=(2, 3), keepdim=True)
-        cam = (weights * acts).sum(dim=1)  # [N, H, W]
+        cam = (weights * acts).sum(dim=1)
         cam = torch.relu(cam)
-        # Normalize CAM per-sample
-        cam = cam - cam.amin(dim=(1,2), keepdim=True)
-        cam = cam / (cam.amax(dim=(1,2), keepdim=True) + 1e-8)
+
+        cam = cam - cam.amin(dim=(1, 2), keepdim=True)
+        cam = cam / (cam.amax(dim=(1, 2), keepdim=True) + 1e-8)
         return cam.detach().cpu().numpy(), class_idx
 
-# EfficientNet-B0’s last conv block lives in features[-1], which works well as a target.
 target_layer = model.base_model.features[-1]
 grad_cam = GradCAM(model, target_layer)
 
@@ -160,25 +153,31 @@ if uploaded:
             st.write(f"**Defect Class:** {pred_name}")
             st.write(f"**Confidence:** {conf:.2f}")
 
-            # Grad-CAM heatmap
+            # -----------------------------
+            # Grad-CAM visualization
+            # -----------------------------
             cam, _ = grad_cam(ipt, class_idx=pred_idx)
             cam = cam[0]
-            cam = np.maximum(cam, 0)
-            cam = cam / cam.max()
-            cam = 1 - cam  # HxW
-            heatmap = cv2.resize(cam, (img.size[0], img.size[1]))
-            heatmap = np.uint8(255 * heatmap)
-            heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)  # fix BGR→RGB
 
-            over = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
+            # Normalize and optionally invert
+            cam = np.maximum(cam, 0)
+            cam = cam / (cam.max() + 1e-8)
+            INVERT = True
+            if INVERT:
+                cam = 1 - cam
+
+            heatmap = np.uint8(255 * cam)
+            heatmap = cv2.resize(heatmap, (img.size[0], img.size[1]))
+            heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+
+            overlay = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
 
             st.write("### Visualization")
-
             col1, col2 = st.columns([1, 1])
             with col1:
                 st.image(img, caption="Original Wafer", width=300)
             with col2:
-                st.image(over, caption="Grad-CAM Heatmap", width=300)
+                st.image(overlay, caption="Grad-CAM Heatmap", width=300)
 
             st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")

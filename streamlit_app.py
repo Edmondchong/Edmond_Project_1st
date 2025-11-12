@@ -154,22 +154,23 @@ if uploaded:
             st.write(f"**Confidence:** {conf:.2f}")
 
             # -----------------------------
-            # Grad-CAM visualization (reversed colormap)
+            # Grad-CAM visualization
             # -----------------------------
             cam, _ = grad_cam(ipt, class_idx=pred_idx)
             cam = cam[0]
+
+            # Normalize and optionally invert
             cam = np.maximum(cam, 0)
             cam = cam / (cam.max() + 1e-8)
+            INVERT = True
+            if INVERT:
+                cam = 1 - cam
 
             heatmap = np.uint8(255 * cam)
             heatmap = cv2.resize(heatmap, (img.size[0], img.size[1]))
-
-            # 🔥 Reverse the color map LUT so red/yellow = high attention
-            lut = cv2.applyColorMap(np.arange(0, 256, dtype=np.uint8), cv2.COLORMAP_JET)
-            lut = np.flip(lut, axis=0).copy()
-            heatmap = cv2.LUT(heatmap, lut)
-
+            heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
             heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+
             overlay = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
 
             st.write("### Visualization")
@@ -179,4 +180,5 @@ if uploaded:
             with col2:
                 st.image(overlay, caption="Grad-CAM Heatmap", width=300)
 
-            st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class (red/yellow = high importance).")
+            st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")
+

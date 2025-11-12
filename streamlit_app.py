@@ -16,7 +16,7 @@ st.caption("Upload a wafer map image to get class prediction and an explainabili
 # -----------------------------
 # Config (edit these 2 values)
 # -----------------------------
-HF_REPO = "https://huggingface.co/EdmondChong/WaferDefectDetection"   # <-- change
+HF_REPO = "EdmondChong/WaferDefectDetection"   # <-- change
 MODEL_FILENAME = "wafer_efficientnet_b0_finetuned.pth"   # <-- change
 #LABELS_FILENAME = "labels.json"                          # optional
 

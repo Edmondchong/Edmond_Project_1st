@@ -62,7 +62,7 @@ def load_model(model_path, labels):
     model.load_state_dict(state_dict, strict=True)
     model.eval()
 
-    classes = ["Center", "Edge-Loc", "Edge-Ring", "Loc", "None", "Scratch"]
+    classes = ["Center", "Edge-Loc", "Edge-Ring", "Loc", "Scratch", "None"]
     return model, classes
 
 model, CLASSES = load_model(model_path, class_names)

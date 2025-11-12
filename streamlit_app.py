@@ -167,8 +167,8 @@ if uploaded:
 
             c1, c2 = st.columns(2)
             with c1:
-                st.image(img, caption="Original", use_column_width=True)
+                st.image(img, caption="Original", width=250)
             with c2:
-                st.image(over, caption="Grad-CAM Heatmap", use_column_width=True)
+                st.image(over, caption="Grad-CAM Heatmap", width=250)
 
             st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")

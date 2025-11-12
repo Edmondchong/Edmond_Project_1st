@@ -16,9 +16,9 @@ st.caption("Upload a wafer map image to get class prediction and an explainabili
 # -----------------------------
 # Config (edit these 2 values)
 # -----------------------------
-HF_REPO = "EdmondChong/WaferDefectDetection"   # <-- change
-MODEL_FILENAME = "wafer_efficientnet_b0_finetuned.pth"   # <-- change
-#LABELS_FILENAME = "labels.json"                          # optional
+HF_REPO = "EdmondChong/WaferDefectDetection"  
+MODEL_FILENAME = "wafer_efficientnet_b0_finetuned.pth"   
+LABELS_FILENAME = "labels.json"                          
 
 # -----------------------------
 # Download artifacts (private)
@@ -167,8 +167,8 @@ if uploaded:
 
             c1, c2 = st.columns(2)
             with c1:
-                st.image(img, caption="Original", width=250)
+                st.image(img, caption="Original", width=100)
             with c2:
-                st.image(over, caption="Grad-CAM Heatmap", width=250)
+                st.image(over, caption="Grad-CAM Heatmap", width=100)
 
             st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")

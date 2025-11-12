@@ -165,10 +165,12 @@ if uploaded:
 
             over = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
 
-            c1, c2 = st.columns(2)
-            with c1:
-                st.image(img, caption="Original", width=100)
-            with c2:
-                st.image(over, caption="Grad-CAM Heatmap", width=100)
+            st.write("### Visualization")
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.image(img, caption="Original Wafer", width=250)
+            with col2:
+                st.image(over, caption="Grad-CAM Heatmap", width=250)
 
             st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")

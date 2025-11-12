@@ -70,13 +70,16 @@ def load_model(model_path, labels):
     model.eval()
 
     # Finalize class names
-    if labels and isinstance(labels, list) and len(labels) == num_classes:
-        classes = labels
-    else:
-        classes = [f"class_{i}" for i in range(num_classes)]
-    return model, classes
+    classes = [
+        "Center",
+        "Edge-Loc",
+        "Edge-Ring",
+        "Loc",
+        "None",
+        "Scratch"
+    ]
 
-model, CLASSES = load_model(model_path, class_names)
+return model, classes
 
 # -----------------------------
 # Preprocessing (match training)

@@ -26,7 +26,7 @@ LABELS_FILENAME = "labels.json"                          # optional
 @st.cache_resource
 def fetch_artifacts():
     model_path = hf_hub_download(
-        repo_id=HF_REPO, filename=MODEL_FILENAME, use_auth_token=st.secrets["HF_TOKEN"]
+        repo_id=HF_REPO, filename=MODEL_FILENAME, token=st.secrets["HF_TOKEN"]
     )
     labels = None
     try:

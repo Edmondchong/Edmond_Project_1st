@@ -162,7 +162,7 @@ if uploaded:
 
             # Grad-CAM heatmap
             cam, _ = grad_cam(ipt, class_idx=pred_idx)
-            cam = cam[0]  # HxW
+            cam = 1 - cam  # HxW
             heatmap = (cam * 255).astype("uint8")
             heatmap = cv2.resize(heatmap, (img.size[0], img.size[1]))
             heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)

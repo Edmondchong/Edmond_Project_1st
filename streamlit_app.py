@@ -78,8 +78,8 @@ def load_model(model_path, labels):
         "None",
         "Scratch"
     ]
+    return model, classes
 
-return model, classes
 
 # -----------------------------
 # Preprocessing (match training)

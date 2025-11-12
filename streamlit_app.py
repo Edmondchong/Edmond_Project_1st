@@ -162,12 +162,14 @@ if uploaded:
 
             # Grad-CAM heatmap
             cam, _ = grad_cam(ipt, class_idx=pred_idx)
-            cam = cam[0]  
+            cam = cam[0]
+            cam = np.maximum(cam, 0)
+            cam = cam / cam.max()
             cam = 1 - cam  # HxW
-            heatmap = np.uint8(cam * 255)
-            heatmap = cv2.resize(heatmap, (img.size[0], img.size[1]))
+            heatmap = cv2.resize(cam, (img.size[0], img.size[1]))
+            heatmap = np.uint8(255 * heatmap)
             heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)  # fix BGR→RGB
 
             over = cv2.addWeighted(np.array(img.convert("RGB")), 0.6, heatmap, 0.4, 0)
 

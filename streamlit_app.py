@@ -140,7 +140,7 @@ grad_cam = GradCAM(model, target_layer)
 uploaded = st.file_uploader("📤 Upload wafer map image (PNG/JPG)", type=["png", "jpg", "jpeg"])
 if uploaded:
     img = Image.open(uploaded)
-    st.image(img, caption="Uploaded Wafer Image", use_column_width=True)
+    st.image(img, caption="Uploaded Wafer Image", width=250)
 
     if st.button("Predict & Explain"):
         with st.spinner("Running inference…"):
@@ -169,8 +169,8 @@ if uploaded:
 
             col1, col2 = st.columns([1, 1])
             with col1:
-                st.image(img, caption="Original Wafer", width=250)
+                st.image(img, caption="Original Wafer", width=300)
             with col2:
-                st.image(over, caption="Grad-CAM Heatmap", width=250)
+                st.image(over, caption="Grad-CAM Heatmap", width=300)
 
             st.caption("Note: Heatmap highlights spatial regions most influential for the predicted class.")
